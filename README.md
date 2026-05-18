@@ -48,10 +48,11 @@ pip freeze
 ```
 
 ## Konfigurasi Environment (.env)
-Buat sebuah file bernama .env di direktori utama proyek, lalu sesuaikan dengan kredensial database ```bash
-MySQL masing-masing:
+Buat sebuah file bernama .env di direktori utama proyek, lalu sesuaikan dengan kredensial database MySQL masing-masing:
+ ```bash
 DB_HOST=localhost
 DB_USER=user_anda
 DB_PASSWORD=password_anda
 DB_NAME=nama_database_anda
-DB_PORT=3306```
+DB_PORT=3306
+```
