@@ -1,0 +1,1 @@
+# Fungsi ekstraksi CSV, pembersihan data, & load ke DB
