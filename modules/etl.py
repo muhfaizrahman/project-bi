@@ -24,11 +24,13 @@ def transform_data(df):
     # 1. Menghapus baris yang sepenuhnya duplikat
     df = df.drop_duplicates()
     
-    # 2. Menangani missing values (Nilai kosong/NaN)
-    df = df.dropna()
-    
-    # 3. Standardisasi nama kolom
+    # 2. Standardisasi nama kolom
     df.columns = df.columns.str.lower().str.replace('-', '_').str.replace(' ', '_')
+    
+    # 3. Menangani missing values (Nilai kosong/NaN)
+    df['postal_code'] = df['postal_code'].fillna('05702')
+    print(df.isnull().sum())
+    df = df.dropna()
     
     # 4. Mengamankan dan menyelaraskan tipe data tanggal (order_date & ship_date)
     kolom_tanggal = ['order_date', 'ship_date']
