@@ -25,20 +25,30 @@ def transform_data(df):
     df = df.drop_duplicates()
     
     # 2. Menangani missing values (Nilai kosong/NaN)
-    # Di sini kita menghapus baris yang memiliki nilai kosong. 
-    # Alternatif lain: df.fillna(0) untuk mengisi nilai kosong dengan angka 0.
     df = df.dropna()
     
-    # 3. Standardisasi nama kolom (penting agar penamaan tabel di MySQL rapi)
-    # Mengubah semua huruf menjadi kecil dan mengganti spasi dengan underscore
+    # 3. Standardisasi nama kolom
     df.columns = df.columns.str.lower().str.replace(' ', '_')
     
-    # 4. (Opsional) Mengamankan tipe data tanggal jika kolom invoice_date ada di dataset
+    # 4. Mengamankan tipe data tanggal
     if 'invoice_date' in df.columns:
         # Pandas bisa mencoba mendeteksi format tanggal secara otomatis
         df['invoice_date'] = pd.to_datetime(df['invoice_date'], format='mixed', errors='coerce')
         # Hapus data yang format tanggalnya rusak/tidak terbaca
         df = df.dropna(subset=['invoice_date'])
+        # Mengurutkan tanggal dari yang terlawas ke terbaru
+        df = df.sort_values(by='invoice_date', ascending=True)
+        
+    # 5. Membuat kolom baru untuk memetakkan bulan setiap transaksi
+    df['invoice_month'] = df['invoice_date'].dt.to_period('M').astype(str)
+
+    # 6. Replace nama price menjadi total_price
+    if 'price' in df.columns:
+        df = df.rename(columns={'price': 'total_price'})
+
+    # 7. Membuat kolom unit_price
+    if 'total_price' in df.columns and 'quantity' in df.columns:
+        df['unit_price'] = df['total_price'] / df['quantity']
 
     return df
 

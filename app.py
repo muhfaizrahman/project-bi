@@ -5,6 +5,7 @@ import os
 import plotly.express as px
 from modules.etl import extract_data, transform_data, load_data
 from core.database import get_engine
+from modules.ml_model import run_revenue_prediction
 
 # 1. Konfigurasi Halaman Web
 st.set_page_config(page_title="BI Dashboard", layout="wide")
@@ -88,10 +89,10 @@ else:
             st.metric(label="Total Transaksi", value=total_transaksi)
             
         with col2:
-            if 'price' in df_dashboard.columns:
-                total_revenue = df_dashboard['price'].sum()
+            if 'total_price' in df_dashboard.columns:
+                total_revenue = df_dashboard['total_price'].sum()
                 # Format ke angka desimal rapi
-                st.metric(label="Total Revenue", value=f"${total_revenue:,.2f}")
+                st.metric(label="Total Revenue", value=f"₺{total_revenue:,.2f}")
             else:
                 st.metric(label="Total Revenue", value="N/A")
                 
@@ -129,6 +130,22 @@ else:
                 fig_pie = px.pie(pay_count, names='Metode Pembayaran', values='Jumlah', 
                                  title="Distribusi Metode Pembayaran")
                 st.plotly_chart(fig_pie, use_container_width=True)
-
+        
+        # --- PREDIKSI MACHINE LEARNING ---
+        st.divider()
+        st.subheader("Analisis Prediktif (Machine Learning)")
+        
+        # Jalankan fungsi prediksi dengan melempar data df_dashboard yang sudah ditarik dari database
+        # (Catatan: Kita pastikan melempar data sebelum terkena filter kategori di sidebar, 
+        # agar prediksi selalu menggunakan seluruh data pendapatan perusahaan)
+        
+        # Tarik ulang data khusus untuk ML jika df_dashboard sudah terlanjur difilter di baris atas
+        df_for_ml = pd.read_sql("SELECT invoice_month, total_price FROM customer_shopping", con=engine)
+        
+        # Generate grafik prediksi
+        fig_prediksi = run_revenue_prediction(df_for_ml)
+        
+        # Tampilkan grafik di Streamlit
+        st.plotly_chart(fig_prediksi, use_container_width=True)
     except Exception as e:
         st.error(f"Gagal memuat data dari database. Error: {e}")
