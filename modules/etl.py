@@ -28,27 +28,25 @@ def transform_data(df):
     df = df.dropna()
     
     # 3. Standardisasi nama kolom
-    df.columns = df.columns.str.lower().str.replace(' ', '_')
+    df.columns = df.columns.str.lower().str.replace('-', '_').str.replace(' ', '_')
     
-    # 4. Mengamankan tipe data tanggal
-    if 'invoice_date' in df.columns:
-        # Pandas bisa mencoba mendeteksi format tanggal secara otomatis
-        df['invoice_date'] = pd.to_datetime(df['invoice_date'], format='mixed', errors='coerce')
-        # Hapus data yang format tanggalnya rusak/tidak terbaca
-        df = df.dropna(subset=['invoice_date'])
-        # Mengurutkan tanggal dari yang terlawas ke terbaru
-        df = df.sort_values(by='invoice_date', ascending=True)
+    # 4. Mengamankan dan menyelaraskan tipe data tanggal (order_date & ship_date)
+    kolom_tanggal = ['order_date', 'ship_date']
+    
+    for col in kolom_tanggal:
+        if col in df.columns:
+            df[col] = pd.to_datetime(df[col], format='%d/%m/%Y', errors='coerce')
+            
+    # Pembersihan baris berdasarkan validitas tanggal
+    if 'order_date' in df.columns:
+        df = df.dropna(subset=['order_date'])
         
+        # df = df.sort_values(by='order_date', ascending=True)
+        
+        # df = df.dropna(subset=['ship_date'])
+
     # 5. Membuat kolom baru untuk memetakkan bulan setiap transaksi
-    df['invoice_month'] = df['invoice_date'].dt.to_period('M').astype(str)
-
-    # 6. Replace nama price menjadi total_price
-    if 'price' in df.columns:
-        df = df.rename(columns={'price': 'total_price'})
-
-    # 7. Membuat kolom unit_price
-    if 'total_price' in df.columns and 'quantity' in df.columns:
-        df['unit_price'] = df['total_price'] / df['quantity']
+    df['order_month'] = df['order_date'].dt.to_period('M').astype(str)
 
     return df
 
