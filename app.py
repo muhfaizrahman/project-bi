@@ -6,6 +6,7 @@ import plotly.express as px
 from modules.etl import extract_data, transform_data, load_data
 from core.database import get_engine
 from modules.ml_model import run_revenue_prediction
+from streamlit_plotly_events import plotly_events
 
 # 1. Konfigurasi Halaman Web
 st.set_page_config(page_title="BI Dashboard", layout="wide")
@@ -122,30 +123,97 @@ else:
 
         st.divider()
 
-        # --- PERFORMANCE CHARTS ---
-        st.subheader("Visualisasi Data")
+        st.subheader("Visualisasi Data Interaktif")
+        
+        # --- INISIALISASI STATE UNTUK CROSS-FILTERING ---
+        if 'filter_segment' not in st.session_state:
+            st.session_state.filter_segment = None
+        if 'filter_category' not in st.session_state:
+            st.session_state.filter_category = None
+
+        # Tombol kecil di atas chart untuk mereset filter klik grafik
+        if st.session_state.filter_segment or st.session_state.filter_category:
+            if st.button("❌ Bersihkan Filter Klik Grafik"):
+                st.session_state.filter_segment = None
+                st.session_state.filter_category = None
+                st.rerun()
+
+        # --- TERAPKAN CROSS-FILTER JIKA ADA YANG DIKLIK ---
+        if st.session_state.filter_segment:
+            df_filtered = df_filtered[df_filtered['segment'] == st.session_state.filter_segment]
+            st.info(f"Filter interaktif aktif: Segment = **{st.session_state.filter_segment}**")
+            
+        if st.session_state.filter_category:
+            df_filtered = df_filtered[df_filtered['category'] == st.session_state.filter_category]
+            st.info(f"Filter interaktif aktif: Kategori = **{st.session_state.filter_category}**")
+
+
+        # --- BARIS 1: 2 CHART UTAMA (DENGAN NATIVE SELECTION STREAMLIT) ---
         chart_col1, chart_col2 = st.columns(2)
         
         with chart_col1:
-            # KUNCI PERBAIKAN: Gunakan df_filtered di sini
             if 'category' in df_filtered.columns:
                 kat_count = df_filtered['category'].value_counts().reset_index()
                 kat_count.columns = ['Kategori', 'Jumlah']
                 
                 fig_bar = px.bar(kat_count, x='Kategori', y='Jumlah', 
-                                 title="Penjualan Berdasarkan Kategori",
+                                 title="Penjualan Berdasarkan Kategori (Klik Batangnya!)",
                                  color='Kategori')
-                st.plotly_chart(fig_bar, use_container_width=True)
+                
+                # MENGGUNAKAN FITUR NATIVE STREAMLIT: on_select
+                bar_event = st.plotly_chart(fig_bar, use_container_width=True, on_select="rerun", key="bar_category")
+                
+                # Logika penangkap klik
+                if bar_event and len(bar_event['selection']['points']) > 0:
+                    clicked_cat = bar_event['selection']['points'][0]['x']
+                    if st.session_state.filter_category != clicked_cat:
+                        st.session_state.filter_category = clicked_cat
+                        st.rerun()
 
         with chart_col2:
-            # KUNCI PERBAIKAN: Gunakan df_filtered di sini
             if 'segment' in df_filtered.columns:
                 segment_count = df_filtered['segment'].value_counts().reset_index()
                 segment_count.columns = ['Customer', 'Jumlah']
                 
                 fig_pie = px.pie(segment_count, names='Customer', values='Jumlah', 
-                                 title="Segmentasi Customer")
-                st.plotly_chart(fig_pie, use_container_width=True)
+                                 title="Segmentasi Customer (Klik Potongan Pie-nya!)")
+                
+                # MENGGUNAKAN FITUR NATIVE STREAMLIT: on_select
+                pie_event = st.plotly_chart(fig_pie, use_container_width=True, on_select="rerun", key="pie_segment")
+                
+                # Logika penangkap klik pie chart
+                if pie_event and len(pie_event['selection']['points']) > 0:
+                    point_index = pie_event['selection']['points'][0]['point_index']
+                    clicked_seg = segment_count.iloc[point_index]['Customer']
+                    if st.session_state.filter_segment != clicked_seg:
+                        st.session_state.filter_segment = clicked_seg
+                        st.rerun()
+
+        # --- BARIS 2: 3 CHART BARU TAMBAHAN ---
+        st.write("#### Analisis Tambahan & Tren")
+        sub_col1, sub_col2, sub_col3 = st.columns(3)
+        
+        with sub_col1:
+            if 'sub_category' in df_filtered.columns:
+                sub_count = df_filtered['sub_category'].value_counts().reset_index().head(10)
+                sub_count.columns = ['Sub-Kategori', 'Jumlah']
+                fig_sub = px.bar(sub_count, x='Jumlah', y='Sub-Kategori', orientation='h', title="Top 10 Sub-Kategori", color='Sub-Kategori')
+                fig_sub.update_layout(showlegend=False, yaxis={'categoryorder':'total ascending'})
+                st.plotly_chart(fig_sub, use_container_width=True)
+                
+        with sub_col2:
+            if 'order_date' in df_filtered.columns and 'sales' in df_filtered.columns:
+                daily_sales = df_filtered.groupby('order_date')['sales'].sum().reset_index()
+                fig_line = px.line(daily_sales, x='order_date', y='sales', title="Tren Penjualan Harian", markers=True)
+                fig_line.update_traces(line_color='#2ca02c')
+                st.plotly_chart(fig_line, use_container_width=True)
+                
+        with sub_col3:
+            if 'ship_mode' in df_filtered.columns:
+                ship_count = df_filtered['ship_mode'].value_counts().reset_index()
+                ship_count.columns = ['Mode Pengiriman', 'Jumlah']
+                fig_donut = px.pie(ship_count, names='Mode Pengiriman', values='Jumlah', title="Opsi Pengiriman", hole=0.4)
+                st.plotly_chart(fig_donut, use_container_width=True)
         
         # --- PREDIKSI MACHINE LEARNING ---
         st.divider()
