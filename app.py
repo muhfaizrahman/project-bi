@@ -6,7 +6,6 @@ import plotly.express as px
 from modules.etl import extract_data, transform_data, load_data
 from core.database import get_engine
 from modules.ml_model import run_revenue_prediction
-from streamlit_plotly_events import plotly_events
 
 # 1. Konfigurasi Halaman Web
 st.set_page_config(page_title="BI Dashboard", layout="wide")
@@ -157,7 +156,7 @@ else:
                 kat_count.columns = ['Kategori', 'Jumlah']
                 
                 fig_bar = px.bar(kat_count, x='Kategori', y='Jumlah', 
-                                 title="Penjualan Berdasarkan Kategori (Klik Batangnya!)",
+                                 title="Penjualan Berdasarkan Kategori",
                                  color='Kategori')
                 
                 # MENGGUNAKAN FITUR NATIVE STREAMLIT: on_select
@@ -176,7 +175,7 @@ else:
                 segment_count.columns = ['Customer', 'Jumlah']
                 
                 fig_pie = px.pie(segment_count, names='Customer', values='Jumlah', 
-                                 title="Segmentasi Customer (Klik Potongan Pie-nya!)")
+                                 title="Segmentasi Customer")
                 
                 # MENGGUNAKAN FITUR NATIVE STREAMLIT: on_select
                 pie_event = st.plotly_chart(fig_pie, use_container_width=True, on_select="rerun", key="pie_segment")
