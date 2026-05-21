@@ -28,7 +28,7 @@ def transform_data(df):
     df.columns = df.columns.str.lower().str.replace('-', '_').str.replace(' ', '_')
     
     # 3. Menangani missing values (Nilai kosong/NaN)
-    df['postal_code'] = df['postal_code'].fillna('05702')
+    df['postal_code'] = df['postal_code'].fillna('05401')
     print(df.isnull().sum())
     df = df.dropna()
     
